@@ -1,0 +1,22 @@
+name: Snapshot tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  agentsnap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm test       # writes tests/__agentsnap__/*.current.json
+      - uses: MukundaKatta/agentsnap-action@v1
+        with:
+          snapshots-dir: tests/__agentsnap__
