@@ -1,0 +1,76 @@
+name: Test action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  passing-fixtures:
+    runs-on: ubuntu-latest
+    name: Matching baseline + current passes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: snap
+        with:
+          snapshots-dir: fixtures/passing/tests/__agentsnap__
+          comment-on-pr: false
+      - name: Verify outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.snap.outputs.total-snapshots }}" = "1"
+          test "${{ steps.snap.outputs.drift-count }}" = "0"
+          echo "passing fixtures clean"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: passing-report
+          path: agentsnap-report.json
+
+  drifting-fixtures:
+    runs-on: ubuntu-latest
+    name: Drift fails the build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: snap
+        continue-on-error: true
+        with:
+          snapshots-dir: fixtures/drifting/tests/__agentsnap__
+          comment-on-pr: false
+      - name: Verify the action failed and counted drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.snap.outcome }}" != "failure" ]; then
+            echo "expected action to fail on drifting fixtures"
+            exit 1
+          fi
+          test "${{ steps.snap.outputs.drift-count }}" = "1"
+          echo "drift correctly failed the build"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drifting-report
+          path: agentsnap-report.json
+
+  update-mode:
+    runs-on: ubuntu-latest
+    name: update-snapshots overwrites baseline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: snap
+        with:
+          snapshots-dir: fixtures/drifting/tests/__agentsnap__
+          update-snapshots: true
+          comment-on-pr: false
+      - name: Verify update mode does not fail and rewrites baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Drift count is 0 because update mode skips the diff.
+          test "${{ steps.snap.outputs.drift-count }}" = "0"
+          # The baseline should now match the current.
+          diff -q fixtures/drifting/tests/__agentsnap__/search_flow.snap.json fixtures/drifting/tests/__agentsnap__/search_flow.current.json
+          echo "update mode overwrote baseline as expected"
