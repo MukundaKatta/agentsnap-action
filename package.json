@@ -1,0 +1,7 @@
+{
+  "name": "agentsnap-action",
+  "private": true,
+  "type": "module",
+  "description": "Composite action wrapper around @mukundakatta/agentsnap. Installed at runtime by action.yml; this package.json exists so Node treats diff.mjs as ESM and can resolve node_modules from the action dir.",
+  "version": "0.0.0"
+}
