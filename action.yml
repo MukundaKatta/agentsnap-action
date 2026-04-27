@@ -1,0 +1,82 @@
+name: "agentsnap-action"
+description: "Snapshot tests for AI agent tool-call traces. Diffs current traces against baselines and fails the PR on drift."
+author: "MukundaKatta"
+
+branding:
+  icon: "camera"
+  color: "purple"
+
+inputs:
+  snapshots-dir:
+    description: "Directory containing .snap.json baselines and matching .current.json runs."
+    required: false
+    default: "tests/__agentsnap__"
+  update-snapshots:
+    description: "If 'true', overwrite baselines with the current run instead of failing on drift."
+    required: false
+    default: "false"
+  fail-on-drift:
+    description: "Comma-separated drift statuses that fail the run. Subset of: OUTPUT_DRIFT, TOOLS_CHANGED, TOOLS_REORDERED, REGRESSION."
+    required: false
+    default: "OUTPUT_DRIFT,TOOLS_CHANGED,REGRESSION"
+  comment-on-pr:
+    description: "Post the diff summary as a PR comment when drift is detected. Requires permissions: pull-requests: write."
+    required: false
+    default: "true"
+  report-path:
+    description: "Where to write the JSON diff report."
+    required: false
+    default: "agentsnap-report.json"
+  node-version:
+    description: "Node version to set up."
+    required: false
+    default: "20"
+
+outputs:
+  total-snapshots:
+    description: "Number of snapshots checked."
+    value: ${{ steps.run.outputs.total-snapshots }}
+  drift-count:
+    description: "Number of snapshots with drift."
+    value: ${{ steps.run.outputs.drift-count }}
+  report-path:
+    description: "Path to the JSON diff report."
+    value: ${{ steps.run.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install agentsnap
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        # Install into the action dir so the wrapper can `import` the lib via
+        # normal Node resolution.
+        if [ ! -f package.json ]; then
+          echo '{"private":true,"type":"module"}' > package.json
+        fi
+        npm install --no-fund --no-audit --silent @mukundakatta/agentsnap@latest
+
+    - name: Run snapshot diff
+      id: run
+      shell: bash
+      env:
+        AGENTSNAP_DIR: ${{ inputs.snapshots-dir }}
+        AGENTSNAP_UPDATE: ${{ inputs.update-snapshots == 'true' && '1' || '' }}
+        AGENTSNAP_FAIL_ON: ${{ inputs.fail-on-drift }}
+        AGENTSNAP_REPORT_PATH: ${{ inputs.report-path }}
+      run: node "$GITHUB_ACTION_PATH/diff.mjs"
+
+    - name: Comment on PR with drift summary
+      if: ${{ steps.run.outputs.drift-count != '0' && inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPORT_PATH: ${{ steps.run.outputs.report-path }}
+      run: node "$GITHUB_ACTION_PATH/comment.mjs"
