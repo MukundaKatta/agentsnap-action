@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Runner unit tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm install --no-audit --no-fund
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Matching baseline + current passes
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./
         id: snap
         with:
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Drift fails the build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./
         id: snap
         continue-on-error: true
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     name: update-snapshots overwrites baseline
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./
         id: snap
         with:
