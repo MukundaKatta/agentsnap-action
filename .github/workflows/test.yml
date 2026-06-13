@@ -33,7 +33,7 @@ jobs:
           test "${{ steps.snap.outputs.total-snapshots }}" = "1"
           test "${{ steps.snap.outputs.drift-count }}" = "0"
           echo "passing fixtures clean"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: passing-report
           path: agentsnap-report.json
@@ -59,7 +59,7 @@ jobs:
           fi
           test "${{ steps.snap.outputs.drift-count }}" = "1"
           echo "drift correctly failed the build"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: drifting-report
           path: agentsnap-report.json
